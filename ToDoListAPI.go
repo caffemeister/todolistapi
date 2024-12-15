@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -38,13 +37,6 @@ func nextID() int {
 // Use DELETE requests to delete tasks by just specifying .../tasks/<id>
 
 func main() {
-	start := time.Now()
-	defer func() {
-		elapsed := time.Since(start)
-		fmt.Println("")
-		fmt.Printf("Completed in: %dms", elapsed.Milliseconds())
-		fmt.Println("")
-	}()
 	defer db.Close()
 
 	err := InitDB()
