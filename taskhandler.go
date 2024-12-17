@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 )
@@ -15,7 +14,6 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	idStr := r.URL.Path[len("/tasks/"):]
 	id, err := strconv.Atoi(idStr)
-	fmt.Println(id)
 	if err != nil || id <= 0 {
 		http.Error(w, "Invalid task ID", http.StatusBadRequest)
 		return
@@ -66,10 +64,19 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Deletes
 	case http.MethodDelete:
-		delete(tasks, id)
+		deletionQuery := "DELETE FROM tasks WHERE id = ?"
 
-		w.WriteHeader(http.StatusNoContent) // No Content (204)
-		fmt.Fprintf(w, "Task %d deleted successfully", id)
+		_, err := db.Exec(deletionQuery, id)
+		if err != nil {
+			http.Error(w, "Failed to delete task", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]string{"message": "Task deleted successfully."}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 
 	default:
 		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,13 +23,24 @@ type TaskResponse struct {
 
 var (
 	tasks     = make(map[int]Task)
-	taskID    = 1
+	taskID    int
 	tasksLock = &sync.Mutex{}
 )
 
 func nextID() int {
+	var taskID int
+
+	// Query the database for the MAX(id) in tasks
+	err := db.QueryRow("SELECT MAX(id) FROM tasks").Scan(&taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("No rows found in the tasks table.")
+		} else {
+			panic(err) // Handle unexpected errors
+		}
+	}
 	taskID++
-	return taskID - 1
+	return taskID
 }
 
 // Use GET requests to get a list of tasks with params for ?status, ?title, ?limit (how many to show per page) and ?page (which page to go to)
@@ -44,6 +56,7 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
+	taskID = fetchID()
 	http.HandleFunc("/tasks", TasksHandler)
 	http.HandleFunc("/tasks/", TaskHandler)
 
@@ -51,4 +64,16 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
 	}
+}
+
+func fetchID() int {
+	err := db.QueryRow("SELECT MAX(id) FROM tasks").Scan(&taskID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			fmt.Println("Can't find task IDs!")
+		} else {
+			panic(err)
+		}
+	}
+	return taskID
 }
